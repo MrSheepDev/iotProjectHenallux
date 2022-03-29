@@ -6,7 +6,10 @@ import board
 import busio
 import digitalio
 import adafruit_rfm9x
- 
+import mysql.connector
+import time
+from datetime import date, datetime, timedelta
+
 # Define radio parameters.
 RADIO_FREQ_MHZ = 433.0  # Frequency of the radio in Mhz. Must match your
 # module! Can be a value like 915.0, 433.0, etc.
@@ -32,11 +35,16 @@ rfm9x.destination = 65
 # # send a broadcast message from my_node with ID = counter
 # rfm9x.send(bytes("startup message from RPI {} ".format(rfm9x.arduino), "UTF-8"))
  
+#Setting up database connection
+cnx = mysql.connector.connect(host="localhost", user="phpmyadmin", password="raspberry", database="phpmyadmin", raise_on_warnings=True)
+cursor = cnx.cursor()
+
 # # Wait to receive packets.
 # print("Waiting for packets...")
 # initialize flag and timer
 time_now = time.monotonic()
-while True:
+i = 0
+while i < 2:
     # Look for a new packet: only accept if addresses to my_node
     packet = rfm9x.receive(with_header=True, with_ack=True, timeout=10)
     # If no packet was received during the timeout then None is returned.
@@ -59,3 +67,19 @@ while True:
                 ),
         #keep_listening=True,
             )
+        i += 1
+
+print("Data start")
+date_now = datetime.now()
+add_status = ("INSERT INTO lumiere (mesure, temps) VALUES (%s, %s)")
+data_status = (0, date_now)
+
+cursor.execute(add_status, data_status)
+emp_no = cursor.lastrowid
+
+#Transmit data to the database, and close the connection
+cnx.commit()
+
+cursor.close()
+cnx.close()
+print("Data finish")
